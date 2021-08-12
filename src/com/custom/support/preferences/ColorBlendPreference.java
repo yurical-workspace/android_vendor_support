@@ -21,6 +21,7 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.res.TypedArray;
+import android.graphics.Color;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceDataStore;
 import androidx.preference.PreferenceViewHolder;
@@ -29,8 +30,6 @@ import android.util.Log;
 import android.view.View;
 import android.widget.SeekBar;
 import android.widget.TextView;
-
-import com.android.internal.util.ssos.Utils;
 
 import com.custom.support.R;
 import com.custom.support.colorpicker.ColorPickerDialog;
@@ -238,6 +237,38 @@ public class ColorBlendPreference extends Preference
         return true;
     }
 
+    private static int getBlendColorForPercent(int fullColor, int emptyColor, boolean reversed,
+                                        int percentage) {
+        float[] newColor = new float[3];
+        float[] empty = new float[3];
+        float[] full = new float[3];
+        Color.colorToHSV(fullColor, full);
+        int fullAlpha = Color.alpha(fullColor);
+        Color.colorToHSV(emptyColor, empty);
+        int emptyAlpha = Color.alpha(emptyColor);
+        float blendFactor = percentage/100f;
+        if (reversed) {
+            if (empty[0] < full[0]) {
+                empty[0] += 360f;
+            }
+            newColor[0] = empty[0] - (empty[0]-full[0])*blendFactor;
+        } else {
+            if (empty[0] > full[0]) {
+                full[0] += 360f;
+            }
+            newColor[0] = empty[0] + (full[0]-empty[0])*blendFactor;
+        }
+        if (newColor[0] > 360f) {
+            newColor[0] -= 360f;
+        } else if (newColor[0] < 0) {
+            newColor[0] += 360f;
+        }
+        newColor[1] = empty[1] + ((full[1]-empty[1])*blendFactor);
+        newColor[2] = empty[2] + ((full[2]-empty[2])*blendFactor);
+        int newAlpha = (int) (emptyAlpha + ((fullAlpha-emptyAlpha)*blendFactor));
+        return Color.HSVToColor(newAlpha, newColor);
+    }
+
     private void showDialog() {
         mPreviewColorStart = mColorStart;
         mPreviewColorEnd = mColorEnd;
@@ -313,7 +344,7 @@ public class ColorBlendPreference extends Preference
     private void updateDialogSliderPreview() {
         int currentPreview = mDialogColorPreviewSlider.getProgress();
         mDialogPreviewColorBetween.setBackgroundColor(
-                Utils.getBlendColorForPercent(mPreviewColorEnd, mPreviewColorStart,
+                getBlendColorForPercent(mPreviewColorEnd, mPreviewColorStart,
                         mPreviewBlendReverse, currentPreview));
         mDialogColorPreviewText.setText(
                 getContext().getString(R.string.color_blend_preview, currentPreview));
@@ -373,7 +404,7 @@ public class ColorBlendPreference extends Preference
         }
         if (mViewColorBetween != null) {
             mViewColorBetween.setBackgroundColor(
-                    Utils.getBlendColorForPercent(mColorEnd, mColorStart, mBlendReverse, 50));
+                    getBlendColorForPercent(mColorEnd, mColorStart, mBlendReverse, 50));
         }
     }
 
